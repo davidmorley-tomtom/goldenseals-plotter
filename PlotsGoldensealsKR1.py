@@ -2,24 +2,26 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 from sklearn.metrics import precision_recall_curve, confusion_matrix, ConfusionMatrixDisplay
-
+from PlotSQLQuery import PlotSQLQuery
 from PostgresHandler import PostgresHandler
 
 
 class PlotsGoldensealsKR1:
+	def __init__(self, opts_dict: dict, pg: PostgresHandler):
+		self._pg = pg
+		self._opts_dict = opts_dict
+		sql_store = PlotSQLQuery(self._opts_dict)
 
-	def __init__(self, conn_dict: dict, opts_dict: dict):
-		# Required precision threshold, will be plotted as horizontal line
-		# and optimal threshold will be quoted at the end
-		self._threshold = opts_dict['threshold']
+		# The hex_to_int function
+		self._pg.execute_query(sql_store.get_hex2dec_function_sql())
 
-		# Where the output pngs will go
-		self._out_dir = opts_dict['output_dir']
+		# The runid if needed
+		self.run_id = self._opts_dict['headers_correlationid']
+		if self.run_id == '':
+			self.run_id = self._pg.execute_select_query(sql_store.get_most_recent_run())[0][0]
 
-		# Get the joined predictions and moderations from postgres
-		self._pgconn = PostgresHandler(conn_dict, opts_dict)
-		self._df = self._pgconn.get_dataframe()
-		self._pgconn.destroy()
+		# The joined prediction-moderation dataframe
+		self._df = self._pg.execute_query_to_pandas(sql_store.get_validation_table_sql(self.run_id))
 
 	def plot_confusion_matrix(self, save: bool = False):
 		df = self._df[self._df['obsv'] != 'UNKNOWN'].dropna()
@@ -55,7 +57,7 @@ class PlotsGoldensealsKR1:
 		best_r = 0
 		best_model_threshold = 0
 		for p_, r_, t_ in zip(p, r, t):
-			if p_ >= self._threshold and r_ > best_r:
+			if p_ >= self._opts_dict['threshold'] and r_ > best_r:
 				best_r = r_
 				best_model_threshold = t_
 		print('Best prec-recall probability threshold: {0:0.4f}'.format(best_model_threshold))
@@ -71,7 +73,7 @@ class PlotsGoldensealsKR1:
 		plt.axhline(0.9, c='blue', alpha=0.2, ls=':')
 		l, = plt.plot(r_stable, p_stable, color='gold', lw=2)
 		lines.append(l)
-		labels.append('{0:0.2f}% coverage at {1:0.1f} precision'.format(best_r * coverage_pc, self._threshold))
+		labels.append('{0:0.2f}% coverage at {1:0.1f} precision'.format(best_r * coverage_pc, self._opts_dict['threshold']))
 		plt.title('Moderated stable set model coverage')
 		plt.xlabel('% Stable set ({0} roads)'.format(len(self._df)))
 		plt.ylabel('Precision')
@@ -83,6 +85,6 @@ class PlotsGoldensealsKR1:
 
 	def save_plot(self, fn: str):
 		try:
-			plt.savefig(os.path.join(self._out_dir, fn))
+			plt.savefig(os.path.join(self._opts_dict['out_dir'], fn))
 		except ValueError as e:
 			print("Error saving plot:", e)
