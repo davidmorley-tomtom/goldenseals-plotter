@@ -1,4 +1,6 @@
 from PlotsGoldensealsKR1 import PlotsGoldensealsKR1
+from PostgresHandler import PostgresHandler
+
 
 # Moderation DB connection details
 CONNECTION = {
@@ -22,7 +24,11 @@ OPTIONS = {
 
 
 if __name__ == '__main__':
-	plotter = PlotsGoldensealsKR1(CONNECTION, OPTIONS)
+	pg = PostgresHandler(CONNECTION)
+	plotter = PlotsGoldensealsKR1(OPTIONS, pg)
+
 	plotter.plot_confusion_matrix(save=False)
 	plotter.plot_precision_recall(save=False)
+
+	pg.destroy()
 	print("## Finished Plotting ##")
