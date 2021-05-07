@@ -6,17 +6,17 @@ from sklearn.metrics import precision_recall_curve, confusion_matrix, ConfusionM
 from PostgresHandler import PostgresHandler
 
 
-class PlotsGoldensealsKR1():
+class PlotsGoldensealsKR1:
 
 	def __init__(self, conn_dict: dict, opts_dict: dict):
 		# Required precision threshold, will be plotted as horizontal line
 		# and optimal threshold will be quoted at the end
-		self._threshold = 0.9
+		self._threshold = opts_dict['threshold']
 
 		# Where the output pngs will go
 		self._out_dir = opts_dict['output_dir']
 
-		# Get the joined predictions and modertions from postgres
+		# Get the joined predictions and moderations from postgres
 		self._pgconn = PostgresHandler(conn_dict, opts_dict)
 		self._df = self._pgconn.get_dataframe()
 		self._pgconn.destroy()
@@ -40,7 +40,7 @@ class PlotsGoldensealsKR1():
 		# because CLOSED is often certain at prob = 1.0 and is a big error if not moderated the same
 		# so the curve will make a series of big steps
 
-		#df = df[df['pred'] != 'CLOSED']
+		df = df[df['pred'] != 'CLOSED']
 
 		# Collapse problem to one vs. rest
 		# Not ideal as should work out PR on each class and average for final plot,
