@@ -1,5 +1,4 @@
 import pandas as pd
-
 from azure.keyvault.secrets import SecretClient
 from azure.identity import AzureCliCredential
 from psycopg2.pool import ThreadedConnectionPool
@@ -82,19 +81,6 @@ class PostgresHandler:
 				on a."headers_causationId" = b."HEADERS_ID") modelled
 			on moderated.osm_id = modelled.osm_id;
 		""".format(self._opts_dict['validation_table'], self._opts_dict['country_code'], hc_id)
-
-	@staticmethod
-	def get_hex2dec_function_sql() -> str:
-		return """
-			create or replace function hex_to_int(hexval varchar) returns integer as $$
-			declare
-				result  int;
-			begin
-				execute 'select x' || quote_literal(hexval) || '::int' into result;
-				return result;
-			end;
-			$$ language plpgsql immutable strict;
-		"""
 
 	def _password(self) -> str:
 		return self._get_secret_from_key_vault(self._conn_dict['keyvault'], self._conn_dict['password_secret'])
